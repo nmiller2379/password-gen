@@ -1,79 +1,105 @@
-// Declare function to generate a random character from a string
-function randomChar(str) {
-  return str[Math.floor(Math.random() * str.length)];
-}
+// Encapsulating the entire script to avoid polluting the global scope
+(function () {
+  // Define character criteria for password generation
+  const criteria = {
+    uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    lowercase: "abcdefghijklmnopqrstuvwxyz",
+    numbers: "0123456789",
+    special: "!@#$%^&*()_+",
+  };
 
-// Add an event listener to the generate button
-document.querySelector("#generate").addEventListener("click", function (event) {
-  event.preventDefault();
-  // Declare variables to store the values of the input fields
-  const passwordText = document.querySelector("#password");
-  const lengthInput = document.querySelector("#length");
-  const uppercaseInput = document.querySelector("#uppercase");
-  const lowercaseInput = document.querySelector("#lowercase");
-  const numbersInput = document.querySelector("#numbers");
-  const specialInput = document.querySelector("#symbols");
-  //   Declare variables to store the values for password criteria
-  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const lowercase = "abcdefghijklmnopqrstuvwxyz";
-  const numbers = "0123456789";
-  const special = "!@#$%^&*()_+";
-  // Declare a variable to store the password
-  let finalPassword;
-  // Declare a variable to store the count of the number of inputs that are checked
-  let checkedCount = 0;
+  /**
+   * Generates a random password based on selected criteria and length.
+   * @param {number} length - Desired length of the password.
+   * @param {Object} options - Object indicating which criteria to include.
+   * @returns {string} The generated password.
+   */
+  function generatePassword(length, options) {
+    let charPool = ""; // To accumulate characters from selected criteria
+    let password = ""; // Initialize password string
 
-  // Check if no criteria is selected
-  if (
-    !uppercaseInput.checked &&
-    !lowercaseInput.checked &&
-    !numbersInput.checked &&
-    !specialInput.checked
-  ) {
-    passwordText.value = "Please select at least one option";
-    return;
-  }
-  if (lengthInput.value < 8 || lengthInput.value > 128) {
-    passwordText.value = "Password length must be between 8 and 128 characters";
-    return;
+    // Iterate over options to build the character pool and initial password
+    Object.keys(options).forEach((option) => {
+      if (options[option]) {
+        charPool += criteria[option]; // Add to pool
+        password += randomChar(criteria[option]); // Ensure each selected criteria is represented
+      }
+    });
+
+    // Fill the remainder of the password with random characters from the pool
+    for (let i = password.length; i < length; i++) {
+      password += randomChar(charPool);
+    }
+
+    return shuffleString(password); // Shuffle to ensure randomness
   }
 
-  // Declare a variable to store the length of the password, string of possible characters, and a temporary password
-  const length = lengthInput.value;
-  let possibleChars = "";
-  let tempPassword = "";
-
-  // Declare a function to build the password
-  function buildPassword(character) {
-    possibleChars += character;
-    checkedCount++;
-    tempPassword += randomChar(character);
+  /**
+   * Picks a random character from a given string.
+   * @param {string} str - String to pick a character from.
+   * @returns {string} A single random character.
+   */
+  function randomChar(str) {
+    return str[Math.floor(Math.random() * str.length)];
   }
 
-  // Check if the criteria is selected and build the password and call function for each one that is checked
-  if (uppercaseInput.checked) {
-    buildPassword(uppercase);
-  }
-  if (lowercaseInput.checked) {
-    buildPassword(lowercase);
-  }
-
-  if (numbersInput.checked) {
-    buildPassword(numbers);
-  }
-  if (specialInput.checked) {
-    buildPassword(special);
-  }
-  for (let i = 0; i < length - checkedCount; i++) {
-    tempPassword += randomChar(possibleChars);
+  /**
+   * Shuffles a string in a random manner.
+   * @param {string} str - String to shuffle.
+   * @returns {string} The shuffled string.
+   */
+  function shuffleString(str) {
+    return str
+      .split("")
+      .sort(() => Math.random() - 0.5)
+      .join("");
   }
 
-  //   Shuffle the password and set the value of the password text area
-  finalPassword = tempPassword
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
+  //   Add event listener to text area to reset the password when clicked
+  document.querySelector("#password").addEventListener("click", function () {
+    window.location.reload();
+  });
 
-  // Set the value of the password text area
-  passwordText.value = finalPassword;
-});
+  //   Add event listener to copy button to copy the password to clipboard
+  document.querySelector("#clipboard").addEventListener("click", function () {
+    const passwordText = document.querySelector("#password");
+    passwordText.select();
+    document.execCommand("copy");
+    passwordText.value =
+      "Password copied to clipboard. Click to generate again.";
+  });
+
+  // Add event listener to the generate button
+  document
+    .querySelector("#generate")
+    .addEventListener("click", function (event) {
+      event.preventDefault(); // Prevent form submission
+
+      const lengthInput = parseInt(document.querySelector("#length").value, 10); // Get password length from input
+      // Gather checkbox states in an options object
+      const options = {
+        uppercase: document.querySelector("#uppercase").checked,
+        lowercase: document.querySelector("#lowercase").checked,
+        numbers: document.querySelector("#numbers").checked,
+        special: document.querySelector("#symbols").checked,
+      };
+
+      // Select the password text area to display the result
+      const passwordText = document.querySelector("#password");
+
+      // Check if no criteria is selected
+      if (Object.values(options).every((option) => !option)) {
+        passwordText.value = "Please select at least one option";
+        return;
+      }
+      // Validate password length
+      if (lengthInput < 8 || lengthInput > 128) {
+        passwordText.value =
+          "Password length must be between 8 and 128 characters";
+        return;
+      }
+
+      // Generate the password and display it
+      passwordText.value = generatePassword(lengthInput, options);
+    });
+})();
